@@ -1,0 +1,113 @@
+<!doctype html>
+
+<head>
+<meta charset="utf-8">
+<title>ADSR Delay Voice</title>
+<style>
+
+body {
+
+font-family: sans-serif;
+font-size: 15px;
+font-weight: bold;
+color: white;
+
+background: linear-gradient(135deg, rgb(11, 11, 132), rgb(73, 5, 73), rgb(118, 5, 5), rgb(73, 5, 73), rgb(11, 11, 132));
+background-size: 400% 400%;
+
+animation: gradient 15s ease infinite;
+height: 100vh;
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+button {
+  background-color: white;
+  border: none;
+  color:black ;
+  padding: 15px 32px;
+  font-family: sans-serif;
+  font-weight: bold;
+  text-align: center;
+  font-size: 12px;
+  margin: 4px 2px;
+}
+
+</style> 
+
+    </head>
+        <body>
+
+
+<button id="trig" type="button">Play note</button>
+
+<p>
+Delay time <input id="time" type="range" min="10" max="2000" value="350"><br>
+Feedback <input id="fb" type="range" min="0" max="95" value="50">
+</p>
+
+<script>    
+
+const ctx = new AudioContext();
+
+const master = new GainNode(ctx)
+master.gain = 0.5;
+
+const delay = new DelayNode(ctx)
+delay.delayTime = 0.35
+
+const feedback = new GainNode(ctx, { gain: 0.5 });
+
+const hpfilter = new BiquadFilterNode(ctx, { type: 'highpass', frequency: 1000 });
+
+delay.connect(feedback);
+feedback.connect(delay);    
+
+delay.connect(hpfilter);
+hpfilter.connect(master);
+master.connect(ctx.destination);
+
+document.getElementById('trig').addEventListener('click', function () {
+
+  ctx.resume();
+
+  const t = ctx.currentTime;
+
+  const osc = new OscillatorNode(ctx, { type: 'sawtooth', frequency: 220 });
+
+  const adsr = new GainNode(ctx, { gain: 0 });
+
+  adsr.gain.setValueAtTime(0, t);
+  adsr.gain.linearRampToValueAtTime(0.2, t + 0.01);
+  adsr.gain.linearRampToValueAtTime(0.2, t);
+  adsr.gain.linearRampToValueAtTime(0.1, t + 0.1);
+  adsr.gain.setValueAtTime(0, t + 0.1);
+
+  osc.connect(adsr);
+  adsr.connect(delay);
+  adsr.connect(master);
+
+  osc.start(t);
+  osc.stop(t + 0.9);
+});
+
+document.getElementById('time').addEventListener('input', function (e) {
+  delay.delayTime.value = e.target.value / 1000;
+});
+document.getElementById('fb').addEventListener('input', function (e) {
+  feedback.gain.value = e.target.value / 100;
+});
+</script>
+
+</body>
+</html>
